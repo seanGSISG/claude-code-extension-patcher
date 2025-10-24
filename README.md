@@ -51,7 +51,7 @@ The script modifies the Claude Code extension to:
 
 - ✅ v2.0.1
 - ✅ v2.0.10
-- ✅ v2.0.26+ (or until it breaks)
+- ✅ v2.0.26+ (or until it breaks again, please open an issue)
 
 ## Usage
 
@@ -97,3 +97,14 @@ Original files are backed up with `.original` extension.
 - Backups are created automatically before patching
 - You can safely re-run the script - it detects if already patched
 - Run with `--restore` to undo all changes
+
+## Credits
+
+Based on the original patch script by [ColeMurray](https://gist.github.com/ColeMurray).
+
+**Enhancements in this version:**
+- ✅ Auto-detection for multiple editors (Cursor, VS Code, VS Code Insiders, Dev Containers)
+- ✅ Support for Claude Code v2.0.26+ with updated patterns
+- ✅ Smart reload messages based on detected editor
+- ✅ Improved error handling and user feedback
+- ✅ Backward compatibility with v2.0.1 and v2.0.10
