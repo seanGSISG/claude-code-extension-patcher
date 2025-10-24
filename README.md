@@ -29,7 +29,7 @@ The script modifies the Claude Code extension to:
 
 - ✅ v2.0.1
 - ✅ v2.0.10
-- ✅ v2.0.26+
+- ✅ v2.0.26+ (or until it breaks again)
 
 ## Usage
 
