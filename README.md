@@ -2,6 +2,28 @@
 
 This script patches the Claude Code extension to add a "Bypass Permissions" mode that automatically approves all tool executions without prompting.
 
+## Quick Start
+
+Download and run the script:
+
+```bash
+# Download the script
+curl -O https://raw.githubusercontent.com/seanGSISG/claude-code-extension-patcher/main/patch-cc-code-remote.sh
+
+# Make it executable
+chmod +x patch-cc-code-remote.sh
+
+# Run it
+./patch-cc-code-remote.sh
+```
+
+Or use wget:
+```bash
+wget https://raw.githubusercontent.com/seanGSISG/claude-code-extension-patcher/main/patch-cc-code-remote.sh
+chmod +x patch-cc-code-remote.sh
+./patch-cc-code-remote.sh
+```
+
 ## What It Does
 
 The script modifies the Claude Code extension to:
@@ -29,7 +51,7 @@ The script modifies the Claude Code extension to:
 
 - ✅ v2.0.1
 - ✅ v2.0.10
-- ✅ v2.0.26+ (or until it breaks again)
+- ✅ v2.0.26+ (or until it breaks)
 
 ## Usage
 
