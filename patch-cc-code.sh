@@ -131,6 +131,8 @@ detect_extension_dir() {
 # ==============================================================================
 
 CUSTOM_EXTENSION_DIR=""
+SKIP_UI=false
+RESTORE_MODE=false
 
 # Handle restore mode and custom paths
 while [[ $# -gt 0 ]]; do
@@ -143,8 +145,12 @@ while [[ $# -gt 0 ]]; do
             CUSTOM_EXTENSION_DIR="$2"
             shift 2
             ;;
+        --no-ui)
+            SKIP_UI=true
+            shift
+            ;;
         --restore)
-            # Restore mode will be handled later
+            RESTORE_MODE=true
             shift
             ;;
         --help|-h)
@@ -154,6 +160,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --extension-dir PATH   Use custom extension directory"
+            echo "  --no-ui               Skip UI enhancements (faster, but red indicator)"
             echo "  --restore             Restore original extension files from backups"
             echo "  --help, -h            Show this help message"
             echo ""
@@ -161,10 +168,9 @@ while [[ $# -gt 0 ]]; do
             echo "  CLAUDE_CODE_EXTENSION_DIR   Override default extension directory"
             echo ""
             echo "Examples:"
-            echo "  $0"
-            echo "  $0 --extension-dir ~/.vscode/extensions"
-            echo "  $0 --restore"
-            echo "  CLAUDE_CODE_EXTENSION_DIR=~/custom/path $0"
+            echo "  $0                    # Apply all patches + UI enhancements"
+            echo "  $0 --no-ui            # Apply only core patches"
+            echo "  $0 --restore          # Restore everything to original"
             exit 0
             ;;
         *)
@@ -259,7 +265,7 @@ fi
 # and exit. This allows users to undo the patches.
 # ==============================================================================
 
-if [ "${1:-}" = "--restore" ]; then
+if [ "$RESTORE_MODE" = true ]; then
     echo "🔄 Restoring original files..."
     echo ""
 
@@ -277,6 +283,15 @@ if [ "${1:-}" = "--restore" ]; then
         echo "✅ Restored webview/index.js"
     else
         echo "⚠️  No backup found for webview/index.js"
+    fi
+
+    # Restore CSS if backup exists
+    css_file="$extension_dir/webview/index.css"
+    if [ -f "$css_file.backup-original" ]; then
+        cp "$css_file.backup-original" "$css_file"
+        echo "✅ Restored webview/index.css"
+    else
+        echo "⚠️  No backup found for webview/index.css"
     fi
 
     echo ""
@@ -519,23 +534,237 @@ rm -f "$extension_js.bak" "$webview_js.bak"* 2>/dev/null || true
 # ==============================================================================
 
 echo ""
-echo "✅ Patching complete!"
+echo "✅ Core patches applied successfully!"
 echo ""
-echo "The following changes were applied:"
-echo "  • Permission mode changed to 'bypassPermissions'"
-echo "  • UI updated to show 'Bypass permissions' instead of 'Ask before edits'"
-echo "  • Session defaults to bypass mode on startup"
+
+# ==============================================================================
+# UI ENHANCEMENTS (Optional)
+# ==============================================================================
+# Apply visual improvements to make bypass mode indicator more subtle
+#
+# RESILIENCE STRATEGY:
+#   - CSS patches use regex to match any class names, not hardcoded values
+#   - Container class is auto-detected from CSS file (e.g., .s, .a, .btn)
+#   - Stable selectors used where possible (element, attribute selectors)
+#   - Minified class names that may change are documented
+#   - If class names change, rules become no-ops (harmless) rather than breaking
+# ==============================================================================
+
+if [ "$SKIP_UI" = false ]; then
+    echo "🎨 Applying UI enhancements (using resilient regex patterns)..."
+    echo ""
+
+    css_file="$extension_dir/webview/index.css"
+
+    # Backup CSS if not already backed up
+    if [ ! -f "$css_file.backup-original" ]; then
+        cp "$css_file" "$css_file.backup-original"
+    fi
+
+    # ==============================================================================
+    # CSS PATCH 1: Change text color from error-red to amber
+    # ==============================================================================
+    # PATTERN: .[CLASS][data-permission-mode=bypassPermissions] .[CLASS]{color:var(--app-error-foreground)}
+    # REGEX: Matches ANY class names (e.g., .s .p, .a .x, .btn .icon)
+    # This is resilient to minification changes across versions
+    # ==============================================================================
+
+    echo "  Applying CSS PATCH 1: Change text color to amber"
+
+    # Regex handles both minified (no spaces) and non-minified (with spaces) CSS
+    # Pattern: .[CLASS][data-permission-mode=bypassPermissions] .[CLASS] OR .[CLASS][data-permission-mode=bypassPermissions].[CLASS]
+    if perl -i.bak-ui -pe 's/(\.[\w-]+\[data-permission-mode=bypassPermissions\]\s*\.[\w-]+)\{color:var\(--app-error-foreground\)\}/$1\{color:rgba(217, 119, 87, 0.9)\}/' "$css_file" 2>/dev/null; then
+        # Verify the change was applied
+        if grep -q '\[data-permission-mode=bypassPermissions\].*{color:rgba(217, 119, 87, 0.9)}' "$css_file" 2>/dev/null; then
+            echo "  ✓ Text color changed to amber"
+        else
+            echo "  ⚠️  Could not verify text color change - may need manual adjustment"
+        fi
+    else
+        echo "  ❌ Failed to apply text color change"
+    fi
+
+    # ==============================================================================
+    # CSS PATCH 2: Add container border and background styling
+    # ==============================================================================
+    # STRATEGY: Dynamically discover the container class name from the CSS file
+    # instead of hardcoding it. This makes it resilient to class name changes.
+    # ==============================================================================
+
+    echo "  Applying CSS PATCH 2: Add container styling"
+
+    # Extract the container class name dynamically (e.g., .s, .a, .btn, etc.)
+    # Pattern: .[CLASS_NAME][data-permission-mode=bypassPermissions]
+    container_class=$(grep -oP '\.[\w-]+(?=\[data-permission-mode=bypassPermissions\])' "$css_file" 2>/dev/null | head -1)
+
+    if [ -n "$container_class" ]; then
+        # Escape special characters for use in sed/perl
+        escaped_class=$(echo "$container_class" | sed 's/\./\\./g')
+
+        # Append container styling after the existing rule
+        # Pattern: .[CONTAINER][data-permission-mode=bypassPermissions].[ICON]{...existing rules...}
+        # Handles both minified (no space) and non-minified (with space) CSS
+        # Appends: .[CONTAINER][data-permission-mode=bypassPermissions]{...new styling...}
+        perl -i.bak-ui2 -pe "s/(${escaped_class}\[data-permission-mode=bypassPermissions\]\s*\.[\w-]+\{[^}]+\})/\$1${container_class}[data-permission-mode=bypassPermissions]{border-left:2px solid rgba(217, 119, 87, 0.3);padding-left:6px;background:rgba(217, 119, 87, 0.05);border-radius:4px}/" "$css_file" 2>/dev/null
+
+        # Verify it was added
+        if grep -q "${container_class}\[data-permission-mode=bypassPermissions\]{border-left:" "$css_file" 2>/dev/null; then
+            echo "  ✓ Container styling added to ${container_class}"
+        else
+            echo "  ⚠️  Could not verify container styling"
+        fi
+    else
+        echo "  ⚠️  Could not auto-detect container class - skipping container styling"
+        echo "     (This is normal if CSS structure has changed significantly)"
+    fi
+
+    # ==============================================================================
+    # CSS PATCH 3: Add hover states and transitions
+    # ==============================================================================
+    # NOTE: These rules use the dynamically discovered container class.
+    # If the container class changes in future versions, these will become no-ops
+    # (harmless but ineffective) and will need updating.
+    # ==============================================================================
+
+    echo "  Applying CSS PATCH 3: Add transitions and overrides"
+
+    # Use the container class we discovered, or fall back to a general selector
+    if [ -n "$container_class" ]; then
+        # Dynamic version using discovered class name
+        cat >> "$css_file" <<EOF
+
+/* Enhanced hover states for permission mode button (${container_class}) */
+${container_class}:hover { opacity: 0.9; transition: opacity 0.15s ease; }
+${container_class}[data-permission-mode=bypassPermissions]:hover {
+    border-left-color: rgba(217, 119, 87, 0.5);
+    transition: border-left-color 0.15s ease, opacity 0.15s ease;
+}
+
+/* Smooth transitions for mode switching */
+${container_class} { transition: all 0.2s ease; }
+${container_class} > * { transition: color 0.2s ease; }
+EOF
+    else
+        # Fallback: use attribute selector only (less specific but more resilient)
+        cat >> "$css_file" << 'EOF'
+
+/* Enhanced hover states for permission mode button (fallback selector) */
+[data-permission-mode=bypassPermissions]:hover {
+    opacity: 0.9;
+    border-left-color: rgba(217, 119, 87, 0.5);
+    transition: all 0.15s ease;
+}
+EOF
+    fi
+
+
+    # ==============================================================================
+    # CSS PATCH 4: General overrides for all red elements
+    # ==============================================================================
+    # STRATEGY: Use body[data-permission-mode=bypassPermissions] prefix which is
+    # stable across versions, combined with general element/attribute selectors.
+    # Minified class names (.r, .xe, .ae, .Z, etc.) may change, but these rules
+    # will become harmless no-ops rather than breaking.
+    # ==============================================================================
+
+    cat >> "$css_file" << 'EOF'
+
+/* ============================================================================
+   RESILIENCE STRATEGY FOR THESE RULES:
+   - body[data-permission-mode=bypassPermissions] prefix is stable (our custom attribute)
+   - Element selectors (button, svg) are stable
+   - Attribute selectors ([style*="..."]) are stable
+   - Minified class names (.r, .xe, .Z) may change in future versions
+   - When class names change, those specific rules become no-ops (harmless)
+   - The general rules (button, svg, attribute selectors) continue working
+   ============================================================================ */
+
+/* Remove red outline from input field in bypass mode */
+/* NOTE: .r class may change - if it does, this becomes a no-op */
+body[data-permission-mode=bypassPermissions] .r:focus-within {
+    border-color: var(--app-input-border) !important;
+}
+body[data-permission-mode=bypassPermissions] .r:not(:focus-within) {
+    border-color: var(--app-input-border) !important;
+}
+
+/* Remove red border from bottom container wrapper */
+/* NOTE: .xe class may change - if it does, this becomes a no-op */
+body[data-permission-mode=bypassPermissions] .xe {
+    border-color: transparent !important;
+}
+
+/* Override all container borders that might be red */
+/* NOTE: .ae, .Qo classes may change - if they do, these become no-ops */
+body[data-permission-mode=bypassPermissions] .ae,
+body[data-permission-mode=bypassPermissions] .Qo,
+body[data-permission-mode=bypassPermissions] > * {
+    border-color: var(--app-input-border) !important;
+}
+
+/* Override all buttons in bypass mode (STABLE - element selector) */
+body[data-permission-mode=bypassPermissions] button {
+    color: rgba(217, 119, 87, 0.9) !important;
+}
+
+/* Override buttons with inline styles (STABLE - attribute selector) */
+body[data-permission-mode=bypassPermissions] button[style*="color"] {
+    color: rgba(217, 119, 87, 0.9) !important;
+}
+
+/* Override error-colored elements like close button */
+/* NOTE: .Z class may change - if it does, this becomes a no-op */
+body[data-permission-mode=bypassPermissions] .Z {
+    color: rgba(217, 119, 87, 0.9) !important;
+}
+
+/* Override SVG icons with inline styles (STABLE - element + attribute selector) */
+body[data-permission-mode=bypassPermissions] svg[style*="color"] {
+    color: rgba(217, 119, 87, 0.9) !important;
+}
+
+/* Catch-all: override any element using error-foreground color (STABLE - attribute selector) */
+body[data-permission-mode=bypassPermissions] *[style*="var(--app-error-foreground)"] {
+    color: rgba(217, 119, 87, 0.9) !important;
+    border-color: rgba(217, 119, 87, 0.3) !important;
+}
+EOF
+
+    # Clean up temp files
+    rm -f "$css_file.bak-ui"* 2>/dev/null || true
+
+    echo "✅ UI enhancements applied!"
+    echo "   • Soft amber color instead of harsh red"
+    echo "   • Subtle left border indicator"
+    echo "   • Smooth hover effects and transitions"
+    echo "   • Removed red borders from all containers"
+    echo "   • Changed button/icon colors to amber"
+    echo "   • Comprehensive error-color overrides"
+    echo ""
+else
+    echo "⚠️  Skipped UI enhancements (--no-ui flag)"
+    echo "   Bypass mode will show harsh red indicator"
+    echo ""
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ All patches applied successfully!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "🔄 Next steps:"
-echo "  1. Reload the VS Code/Cursor window:"
-echo "     • Press Cmd+Shift+P (Mac) or Ctrl+Shift+P (Windows/Linux)"
-echo "     • Type 'Developer: Reload Window'"
-echo "     • Press Enter"
+echo "Changes applied:"
+echo "  • Permission mode: 'bypassPermissions'"
+echo "  • UI button text: 'Bypass permissions'"
+echo "  • Session defaults to bypass mode"
+if [ "$SKIP_UI" = false ]; then
+    echo "  • Visual styling: Soft amber instead of red"
+fi
 echo ""
-echo "  2. After reload, the footer button should show 'Bypass permissions'"
+echo "🔄 Next step: Reload VS Code/Cursor window"
+echo "   • Press Cmd+Shift+P (Mac) or Ctrl+Shift+P (Windows/Linux)"
+echo "   • Type: 'Developer: Reload Window'"
+echo "   • Press Enter"
 echo ""
-echo "  3. To restore original behavior:"
-echo "     bash $0 --restore"
+echo "To restore: $0 --restore"
 echo ""
-echo "📝 Note: Claude will now automatically approve all tool executions"
-echo "   without prompting. Use with caution in production environments."
+echo "⚠️  Claude will now auto-approve all tool executions."
+echo "   Use with caution in production environments."

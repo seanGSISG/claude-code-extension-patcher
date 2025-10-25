@@ -1,5 +1,55 @@
 # Changelog
 
+## v2.2 - 2025-01-25
+
+### 🎯 Major Simplification
+
+**Merged into single script** - `patch-cc-code.sh` now includes all functionality:
+- Core patches (permission mode bypass)
+- UI enhancements (soft amber styling) - enabled by default
+- Cross-platform detection
+- Custom path support
+- Restore functionality
+
+**One command does everything**:
+```bash
+./patch-cc-code.sh    # Apply core patches + UI enhancements
+```
+
+### Breaking Changes
+- ✅ **Merged scripts**: `patch-cc-code-ui-enhanced.sh` merged into `patch-cc-code.sh`
+- ✅ **UI by default**: UI enhancements now applied automatically (use `--no-ui` to skip)
+- ✅ **Simplified docs**: Consolidated all .md files to just README.md and CHANGELOG.md
+- ✅ **Archived old files**: Moved `patch-cc-code-ui-enhanced.sh` and extra .md files to `.archive/`
+
+### New Features
+- **--no-ui flag**: Skip UI enhancements if you prefer the harsh red indicator
+- **Single restore**: `--restore` now restores everything (core + UI)
+- **Cleaner output**: Simplified success messages and progress indicators
+
+### Repository Cleanup
+Moved to `.archive/`:
+- `patch-cc-code-ui-enhanced.sh` (functionality now in main script)
+- `CROSS_PLATFORM.md` (info merged into README.md)
+- `IMPLEMENTATION_SUMMARY.md` (info merged into README.md)
+- `QUICK_START.md` (info merged into README.md)
+- `UI_ENHANCEMENTS.md` (info merged into README.md)
+
+Keeping only:
+- `README.md` - Complete user guide
+- `CHANGELOG.md` - This file
+- `patch-cc-code.sh` - Single unified script
+- `.archive/` - Historical reference files
+
+### Benefits
+- **Simpler**: One script, one command
+- **Faster**: No need to run two scripts
+- **Better UX**: UI enhancements included by default
+- **Less clutter**: Just 2 markdown files instead of 6
+- **Easier to maintain**: Single codebase
+
+---
+
 ## v2.1 - 2025-01-25
 
 ### New: Cross-Platform Support! 🌍
