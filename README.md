@@ -11,7 +11,7 @@ chmod +x patch-cc-code.sh
 # Reload VS Code (Ctrl+Shift+P → "Developer: Reload Window")
 ```
 
-Done. Bypass mode now shows as amber instead of screaming red.
+Done. Bypass mode now available in the extension.
 
 ## What This Does
 
