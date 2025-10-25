@@ -1,2 +1,4 @@
 # Extension Versions Testing
 .vscode/*
+.claude/*
+.archive/*
