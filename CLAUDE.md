@@ -23,7 +23,7 @@ Patches Anthropic's Claude Code VSCode extension to add auto-approve "Bypass Per
 4. **PATCH 4** (webview/index.js): Multiple string replacements for UI text/tooltips
 
 ### CSS Patches (RESILIENT)
-1. **CSS PATCH 1**: Regex `(\.[\w-]+\[data-permission-mode=bypassPermissions\]\s*\.[\w-]+)\{color:var\(--app-error-foreground\)\}` changes red to amber
+1. **CSS PATCH 1**: Regex `(\.[\w-]+\[data-permission-mode=bypassPermissions\]\s*\.[\w-]+)\{color:var\(--app-error-foreground\)\}` changes red to cyan
 2. **CSS PATCH 2**: Auto-detects container class name from file, appends border/background styling
 3. **CSS PATCH 3**: Adds transitions using discovered class name
 4. **CSS PATCH 4**: Appends general overrides with stable selectors (`body[data-permission-mode=bypassPermissions]`)
@@ -52,12 +52,14 @@ Tested: v2.0.1, v2.0.10, v2.0.26, v2.0.27
 Strategy: Patterns degrade gracefully - failed matches become no-ops, not breaks
 
 ## Color Scheme
-Bypass mode uses amber instead of red:
-- `rgba(217, 119, 87, 0.9)` - text/icons
-- `rgba(217, 119, 87, 0.3)` - borders
-- `rgba(217, 119, 87, 0.05)` - backgrounds
+Bypass mode uses vibrant cyan for ALL indicators (status AND input):
+- `rgba(6, 182, 212, 0.9)` - text/icons/buttons (bright cyan)
+- `rgba(6, 182, 212, 0.3)` - borders **including INPUT FIELD** (subtle cyan)
+- `rgba(6, 182, 212, 0.05)` - backgrounds (very light cyan)
+- `rgba(6, 182, 212, 0.5)` - hover borders (medium cyan)
 
 ## Common Issues
 1. Red UI still showing? CSS class names changed - CSS rules become no-ops
-2. Perl syntax errors? Missing `\` before `{}` in replacements
-3. Patches not applying? Check if string literals changed in new version
+2. **Input border still red?** Check `.r` class rules set border to **cyan**, not `var(--app-input-border)`
+3. Perl syntax errors? Missing `\` before `{}` in replacements
+4. Patches not applying? Check if string literals changed in new version

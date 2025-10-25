@@ -562,21 +562,21 @@ if [ "$SKIP_UI" = false ]; then
     fi
 
     # ==============================================================================
-    # CSS PATCH 1: Change text color from error-red to amber
+    # CSS PATCH 1: Change text color from error-red to cyan
     # ==============================================================================
     # PATTERN: .[CLASS][data-permission-mode=bypassPermissions] .[CLASS]{color:var(--app-error-foreground)}
     # REGEX: Matches ANY class names (e.g., .s .p, .a .x, .btn .icon)
     # This is resilient to minification changes across versions
     # ==============================================================================
 
-    echo "  Applying CSS PATCH 1: Change text color to amber"
+    echo "  Applying CSS PATCH 1: Change text color to cyan"
 
     # Regex handles both minified (no spaces) and non-minified (with spaces) CSS
     # Pattern: .[CLASS][data-permission-mode=bypassPermissions] .[CLASS] OR .[CLASS][data-permission-mode=bypassPermissions].[CLASS]
-    if perl -i.bak-ui -pe 's/(\.[\w-]+\[data-permission-mode=bypassPermissions\]\s*\.[\w-]+)\{color:var\(--app-error-foreground\)\}/$1\{color:rgba(217, 119, 87, 0.9)\}/' "$css_file" 2>/dev/null; then
+    if perl -i.bak-ui -pe 's/(\.[\w-]+\[data-permission-mode=bypassPermissions\]\s*\.[\w-]+)\{color:var\(--app-error-foreground\)\}/$1\{color:rgba(6, 182, 212, 0.9)\}/' "$css_file" 2>/dev/null; then
         # Verify the change was applied
-        if grep -q '\[data-permission-mode=bypassPermissions\].*{color:rgba(217, 119, 87, 0.9)}' "$css_file" 2>/dev/null; then
-            echo "  ✓ Text color changed to amber"
+        if grep -q '\[data-permission-mode=bypassPermissions\].*{color:rgba(6, 182, 212, 0.9)}' "$css_file" 2>/dev/null; then
+            echo "  ✓ Text color changed to cyan"
         else
             echo "  ⚠️  Could not verify text color change - may need manual adjustment"
         fi
@@ -601,17 +601,22 @@ if [ "$SKIP_UI" = false ]; then
         # Escape special characters for use in sed/perl
         escaped_class=$(echo "$container_class" | sed 's/\./\\./g')
 
-        # Append container styling after the existing rule
-        # Pattern: .[CONTAINER][data-permission-mode=bypassPermissions].[ICON]{...existing rules...}
-        # Handles both minified (no space) and non-minified (with space) CSS
-        # Appends: .[CONTAINER][data-permission-mode=bypassPermissions]{...new styling...}
-        perl -i.bak-ui2 -pe "s/(${escaped_class}\[data-permission-mode=bypassPermissions\]\s*\.[\w-]+\{[^}]+\})/\$1${container_class}[data-permission-mode=bypassPermissions]{border-left:2px solid rgba(217, 119, 87, 0.3);padding-left:6px;background:rgba(217, 119, 87, 0.05);border-radius:4px}/" "$css_file" 2>/dev/null
+        # Check if container styling already exists to prevent duplicates
+        if ! grep -q "${container_class}\[data-permission-mode=bypassPermissions\]{border-left:" "$css_file" 2>/dev/null; then
+            # Append container styling after the existing rule
+            # Pattern: .[CONTAINER][data-permission-mode=bypassPermissions].[ICON]{...existing rules...}
+            # Handles both minified (no space) and non-minified (with space) CSS
+            # Appends: .[CONTAINER][data-permission-mode=bypassPermissions]{...new styling...}
+            perl -i.bak-ui2 -pe "s/(${escaped_class}\[data-permission-mode=bypassPermissions\]\s*\.[\w-]+\{[^}]+\})/\$1${container_class}[data-permission-mode=bypassPermissions]{border-left:2px solid rgba(6, 182, 212, 0.3);padding-left:6px;background:rgba(6, 182, 212, 0.05);border-radius:4px}/" "$css_file" 2>/dev/null
 
-        # Verify it was added
-        if grep -q "${container_class}\[data-permission-mode=bypassPermissions\]{border-left:" "$css_file" 2>/dev/null; then
-            echo "  ✓ Container styling added to ${container_class}"
+            # Verify it was added
+            if grep -q "${container_class}\[data-permission-mode=bypassPermissions\]{border-left:" "$css_file" 2>/dev/null; then
+                echo "  ✓ Container styling added to ${container_class}"
+            else
+                echo "  ⚠️  Could not verify container styling"
+            fi
         else
-            echo "  ⚠️  Could not verify container styling"
+            echo "  ✓ Container styling already exists for ${container_class}"
         fi
     else
         echo "  ⚠️  Could not auto-detect container class - skipping container styling"
@@ -630,13 +635,15 @@ if [ "$SKIP_UI" = false ]; then
 
     # Use the container class we discovered, or fall back to a general selector
     if [ -n "$container_class" ]; then
-        # Dynamic version using discovered class name
-        cat >> "$css_file" <<EOF
+        # Check if hover states already exist to prevent duplicates
+        if ! grep -q "Enhanced hover states for permission mode button" "$css_file" 2>/dev/null; then
+            # Dynamic version using discovered class name
+            cat >> "$css_file" <<EOF
 
 /* Enhanced hover states for permission mode button (${container_class}) */
 ${container_class}:hover { opacity: 0.9; transition: opacity 0.15s ease; }
 ${container_class}[data-permission-mode=bypassPermissions]:hover {
-    border-left-color: rgba(217, 119, 87, 0.5);
+    border-left-color: rgba(6, 182, 212, 0.5);
     transition: border-left-color 0.15s ease, opacity 0.15s ease;
 }
 
@@ -644,17 +651,27 @@ ${container_class}[data-permission-mode=bypassPermissions]:hover {
 ${container_class} { transition: all 0.2s ease; }
 ${container_class} > * { transition: color 0.2s ease; }
 EOF
+            echo "  ✓ Hover transitions added"
+        else
+            echo "  ✓ Hover transitions already exist"
+        fi
     else
-        # Fallback: use attribute selector only (less specific but more resilient)
-        cat >> "$css_file" << 'EOF'
+        # Check if fallback hover states already exist
+        if ! grep -q "Enhanced hover states for permission mode button (fallback selector)" "$css_file" 2>/dev/null; then
+            # Fallback: use attribute selector only (less specific but more resilient)
+            cat >> "$css_file" << 'EOF'
 
 /* Enhanced hover states for permission mode button (fallback selector) */
 [data-permission-mode=bypassPermissions]:hover {
     opacity: 0.9;
-    border-left-color: rgba(217, 119, 87, 0.5);
+    border-left-color: rgba(6, 182, 212, 0.5);
     transition: all 0.15s ease;
 }
 EOF
+            echo "  ✓ Hover transitions added (fallback)"
+        else
+            echo "  ✓ Hover transitions already exist (fallback)"
+        fi
     fi
 
 
@@ -667,7 +684,9 @@ EOF
     # will become harmless no-ops rather than breaking.
     # ==============================================================================
 
-    cat >> "$css_file" << 'EOF'
+    # Check if body overrides already exist to prevent duplicates
+    if ! grep -q "RESILIENCE STRATEGY FOR THESE RULES" "$css_file" 2>/dev/null; then
+        cat >> "$css_file" << 'EOF'
 
 /* ============================================================================
    RESILIENCE STRATEGY FOR THESE RULES:
@@ -679,13 +698,13 @@ EOF
    - The general rules (button, svg, attribute selectors) continue working
    ============================================================================ */
 
-/* Remove red outline from input field in bypass mode */
+/* Change input border to cyan in bypass mode */
 /* NOTE: .r class may change - if it does, this becomes a no-op */
 body[data-permission-mode=bypassPermissions] .r:focus-within {
-    border-color: var(--app-input-border) !important;
+    border-color: rgba(6, 182, 212, 0.3) !important;
 }
 body[data-permission-mode=bypassPermissions] .r:not(:focus-within) {
-    border-color: var(--app-input-border) !important;
+    border-color: rgba(6, 182, 212, 0.3) !important;
 }
 
 /* Remove red border from bottom container wrapper */
@@ -704,41 +723,45 @@ body[data-permission-mode=bypassPermissions] > * {
 
 /* Override all buttons in bypass mode (STABLE - element selector) */
 body[data-permission-mode=bypassPermissions] button {
-    color: rgba(217, 119, 87, 0.9) !important;
+    color: rgba(6, 182, 212, 0.9) !important;
 }
 
 /* Override buttons with inline styles (STABLE - attribute selector) */
 body[data-permission-mode=bypassPermissions] button[style*="color"] {
-    color: rgba(217, 119, 87, 0.9) !important;
+    color: rgba(6, 182, 212, 0.9) !important;
 }
 
 /* Override error-colored elements like close button */
 /* NOTE: .Z class may change - if it does, this becomes a no-op */
 body[data-permission-mode=bypassPermissions] .Z {
-    color: rgba(217, 119, 87, 0.9) !important;
+    color: rgba(6, 182, 212, 0.9) !important;
 }
 
 /* Override SVG icons with inline styles (STABLE - element + attribute selector) */
 body[data-permission-mode=bypassPermissions] svg[style*="color"] {
-    color: rgba(217, 119, 87, 0.9) !important;
+    color: rgba(6, 182, 212, 0.9) !important;
 }
 
 /* Catch-all: override any element using error-foreground color (STABLE - attribute selector) */
 body[data-permission-mode=bypassPermissions] *[style*="var(--app-error-foreground)"] {
-    color: rgba(217, 119, 87, 0.9) !important;
-    border-color: rgba(217, 119, 87, 0.3) !important;
+    color: rgba(6, 182, 212, 0.9) !important;
+    border-color: rgba(6, 182, 212, 0.3) !important;
 }
 EOF
+        echo "  ✓ Body-level color overrides added"
+    else
+        echo "  ✓ Body-level color overrides already exist"
+    fi
 
     # Clean up temp files
     rm -f "$css_file.bak-ui"* 2>/dev/null || true
 
     echo "✅ UI enhancements applied!"
-    echo "   • Soft amber color instead of harsh red"
+    echo "   • Vibrant cyan color instead of harsh red"
     echo "   • Subtle left border indicator"
     echo "   • Smooth hover effects and transitions"
     echo "   • Removed red borders from all containers"
-    echo "   • Changed button/icon colors to amber"
+    echo "   • Changed button/icon colors to cyan"
     echo "   • Comprehensive error-color overrides"
     echo ""
 else
@@ -756,7 +779,7 @@ echo "  • Permission mode: 'bypassPermissions'"
 echo "  • UI button text: 'Bypass permissions'"
 echo "  • Session defaults to bypass mode"
 if [ "$SKIP_UI" = false ]; then
-    echo "  • Visual styling: Soft amber instead of red"
+    echo "  • Visual styling: Vibrant cyan instead of red"
 fi
 echo ""
 echo "🔄 Next step: Reload VS Code/Cursor window"
