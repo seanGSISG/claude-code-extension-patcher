@@ -89,20 +89,15 @@ Custom path: `./patch-cc-code.sh --extension-dir /your/path`
 
 ⚠️ **Bypasses ALL permission prompts.** Claude auto-approves everything. Use in trusted dev environments only.
 
-## What's Next? (Help Wanted!)
+## What's Next?
 
-We're looking for more features to add. Ideas:
+See [FEATURES.md](FEATURES.md) for roadmap. Community-proven priorities:
+- 🧠 **Context indicator** - Prevent overflow (S-TIER)
+- 💰 **Cost/token display** - Budget tracking (S-TIER)
+- 🎯 **TODO viewer** - Persistent task panel (A-TIER)
+- 👁️ **Subagent monitor** - Track parallel agents (A-TIER)
 
-- 🎨 **Custom themes** - More color schemes beyond cyan
-- ⌨️ **Keyboard shortcuts** - Quick access to common actions
-- 📊 **Token counter** - Real-time usage display
-- 💾 **Auto-save sessions** - Persistent conversation history
-- 🔍 **Enhanced search** - Better file/code search integration
-- 📝 **Custom prompts** - Pre-built prompt templates
-- 🎯 **Context presets** - Quick workspace context switching
-- **Your idea here!**
-
-Have a feature request? Open an issue! Want to build it? PR welcome!
+Have a feature request? Open an issue!
 
 ## Contributing
 
